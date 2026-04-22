@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kodi Media Player Decider 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1017; --surface: #161c26; --surface2: #1e2635; --border: #2c3850;
+    --accent: #3dd6f5; --accent2: #ff7a4a; --accent3: #7fff6b; --accent4: #c77dff;
+    --text: #f0f4fc; --text-dim: #8fa0bc; --text-mid: #c0cedf;
+    --gold: #f5c542; --silver: #b8cfe0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Barlow Condensed', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+  .header { padding: 28px 40px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 16px; position: relative; overflow: hidden; }
+  .header::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+  .header-title { font-size: 46px; font-weight: 900; letter-spacing: -0.5px; line-height: 1; color: var(--text); }
+  .header-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 6px; }
+  .header-year { margin-left: auto; font-size: 46px; font-weight: 900; color: #4a5a72; letter-spacing: -1px; line-height: 1; }
+
+  .main { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  .progress-bar { display: flex; gap: 6px; margin-bottom: 36px; align-items: center; }
+  .progress-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: all 0.3s ease; }
+  .progress-dot.active { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .progress-dot.done { background: var(--accent3); }
+  .progress-label { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text-dim); margin-left: 12px; letter-spacing: 1px; }
+
+  .question-card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 40px 48px; position: relative; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+  .question-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent4)); border-radius: 4px 4px 0 0; }
+  .question-num { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 14px; }
+  .question-text { font-size: 32px; font-weight: 700; line-height: 1.2; margin-bottom: 32px; color: var(--text); }
+  .question-link { margin-top: -18px; margin-bottom: 28px; font-size: 17px; }
+  .question-link a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(61,214,245,0.4); padding-bottom: 1px; transition: border-color 0.15s; }
+  .question-link a:hover { border-color: var(--accent); }
+  .choices { display: flex; flex-direction: column; gap: 12px; }
+  .choice-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 18px 24px; text-align: left; cursor: pointer; font-family: 'Barlow Condensed', sans-serif; font-size: 21px; font-weight: 500; color: var(--text); letter-spacing: 0.2px; transition: all 0.18s ease; display: flex; align-items: flex-start; gap: 16px; position: relative; overflow: hidden; line-height: 1.35; }
+  .choice-btn::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); transform: scaleY(0); transition: transform 0.18s ease; }
+  .choice-btn:hover { background: #253045; border-color: var(--accent); color: #fff; transform: translateX(4px); }
+  .choice-btn:hover::before { transform: scaleY(1); }
+  .choice-letter { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--accent); font-weight: 700; min-width: 24px; padding-top: 3px; }
+
+  .result-screen { animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+  .result-label { font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 10px; }
+  .result-label.best { color: var(--gold); }
+  .result-label.alt  { color: var(--silver); }
+  .result-card { border-radius: 4px; padding: 32px 40px; margin-bottom: 20px; position: relative; overflow: hidden; }
+  .result-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .result-card.best { background: #1a1800; border: 1px solid #5a4800; }
+  .result-card.best::before { background: linear-gradient(90deg, var(--gold), #ffab00); }
+  .result-card.alt  { background: #141e2e; border: 1px solid var(--border); }
+  .result-card.alt::before { background: linear-gradient(90deg, var(--silver), #8ab0d0); }
+  .result-device { font-size: 40px; font-weight: 900; line-height: 1.1; margin-bottom: 6px; letter-spacing: -0.5px; }
+  .result-device .rooted { font-size: 0.75em; }
+  .result-card.best .result-device { color: var(--gold); }
+  .result-card.alt  .result-device { color: var(--silver); font-size: 34px; }
+  .result-sub  { font-size: 20px; font-weight: 400; color: var(--text-mid); margin-bottom: 4px; }
+  .result-desc { font-size: 20px; color: var(--text-mid); line-height: 1.55; font-weight: 400; margin-top: 12px; }
+  .alt-or { font-size: 20px; color: var(--text-dim); font-weight: 400; line-height: 1.6; }
+  .alt-or-device { font-size: 34px; font-weight: 900; color: var(--silver); letter-spacing: -0.5px; line-height: 1.2; }
+  .result-alts { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .result-alts-label { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+  .result-alts-list { display: flex; flex-direction: column; gap: 6px; }
+  .result-alts-list .alts-intro { font-size: 19px; color: var(--text-dim); line-height: 1.4; }
+  .result-alts-list .alts-item  { font-size: 19px; color: var(--text-mid); line-height: 1.4; }
+  .result-alts-list .alts-item span { color: var(--text); font-weight: 500; }
+
+  .path-trail { margin-top: 36px; padding: 24px 32px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; }
+  .path-trail-label { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-dim); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 14px; }
+  .path-item { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .path-item:last-child { border-bottom: none; }
+  .path-q { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text-dim); flex: 0 0 auto; padding-top: 2px; }
+  .path-a { font-size: 18px; color: var(--text); font-weight: 500; line-height: 1.4; }
+
+  .note-box { margin-top: 20px; padding: 20px 26px; background: rgba(255,122,74,0.08); border: 1px solid rgba(255,122,74,0.3); border-radius: 4px; font-size: 16px; color: var(--text-mid); line-height: 1.65; }
+  .note-label { color: var(--accent2); font-weight: 700; }
+  .note-bullets { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .note-bullets li { display: flex; gap: 10px; align-items: flex-start; text-align: left; }
+  .note-bullets li::before { content: '•'; color: var(--accent2); font-weight: 700; flex-shrink: 0; }
+
+  .btn-row { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; }
+  .btn { padding: 14px 30px; border-radius: 3px; font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.18s ease; border: none; }
+  .btn-primary { background: var(--accent); color: #050a10; }
+  .btn-primary:hover { background: #6ee8ff; transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--text-mid); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--text-mid); color: var(--text); transform: translateY(-1px); }
+
+  .review-link-row { margin-top: 28px; text-align: center; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 12px; }
+  .review-link-sep { color: var(--border); font-size: 14px; }
+  .review-link { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(61,214,245,0.4); padding-bottom: 1px; cursor: pointer; transition: border-color 0.15s; letter-spacing: 1px; outline: none; }
+  .review-link:hover { border-color: var(--accent); }
+
+  .tablestakes { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent3); border-radius: 4px; padding: 22px 28px; margin-bottom: 32px; }
+  .tablestakes-title { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--accent3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+  .tablestakes ul, .overlay-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .tablestakes li, .overlay-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 18px; color: var(--text-mid); line-height: 1.4; text-align: left; }
+  .tablestakes li::before, .overlay-list li::before { content: '+'; color: var(--accent3); font-weight: 700; flex-shrink: 0; }
+
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 500; align-items: center; justify-content: center; padding: 24px; }
+  .overlay.open { display: flex; }
+  .overlay-box { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 36px 40px; max-width: 580px; width: 100%; position: relative; animation: slideIn 0.3s cubic-bezier(0.16,1,0.3,1); }
+  .overlay-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent3), var(--accent)); border-radius: 4px 4px 0 0; }
+  .overlay-title { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 20px; }
+  .overlay-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: var(--text-dim); font-size: 22px; cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 3px; transition: color 0.15s, background 0.15s; }
+  .overlay-close:hover { color: var(--text); background: var(--surface2); }
+
+  .intro { text-align: center; padding: 40px 20px 20px; animation: slideIn 0.5s ease; }
+  .intro-headline { font-size: 58px; font-weight: 900; letter-spacing: -1px; line-height: 1.05; margin-bottom: 18px; color: var(--text); }
+  .intro-sub { font-size: 22px; color: var(--text-mid); max-width: 520px; margin: 0 auto 36px; font-weight: 400; line-height: 1.5; }
+  .glow-line { width: 80px; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); margin: 0 auto 36px; }
+
+  @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 600px) {
+    .header { padding: 20px; }
+    .header-title { font-size: 30px; }
+    .header-year { font-size: 30px; }
+    .question-card { padding: 28px 20px; }
+    .question-text { font-size: 24px; }
+    .choice-btn { font-size: 18px; }
+    .result-device { font-size: 30px; }
+    .intro-headline { font-size: 38px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">Kodi-centric Media Player Decider</div>
+    <div class="header-sub">Media Player Selector · ht2tweak @ Kodi forum · Last updated April 22, 2026</div>
+  </div>
+  <div class="header-year">2026</div>
+</div>
+
+<div class="overlay" id="tablestakesOverlay" onclick="closeOverlay(event)">
+  <div class="overlay-box">
+    <button class="overlay-close" onclick="toggleOverlay(false)">✕</button>
+    <div class="overlay-title">All recommendations assume these table stakes</div>
+    <ul class="overlay-list" id="overlayList"></ul>
+  </div>
+</div>
+
+<div class="main" id="app"></div>
+
+<script>
+// ── Overlay ──────────────────────────────────────────────────────────────────
+function toggleOverlay(open) {
+  document.getElementById('tablestakesOverlay').classList.toggle('open', open);
+}
+function closeOverlay(e) {
+  if (e.target === document.getElementById('tablestakesOverlay')) toggleOverlay(false);
+}
+
+// ── Shared data ──────────────────────────────────────────────────────────────
+const TABLE_STAKES = [
+  'Proper 23.976fps and all common framerates',
+  'Full HD / object-based audio passthrough',
+  '4K and all HDR formats supported',
+  'Gigabit LAN, solid WiFi 6/6E, or solid performance w/gigabit USB-to-ethernet dongle',
+  'Snappy and powerful enough for modern media',
+  'Basic technical comfort level installing and setting up software (CoreELEC, ZDMC Kodi fork), and keeping up w/development in forums'
+];
+
+// Single source of truth — populate both intro list and overlay on load
+const stakeItems = TABLE_STAKES.map(s => `<li>${s}</li>`).join('');
+document.getElementById('overlayList').innerHTML = stakeItems;
+
+const MODDING_Q = {
+  q: 'Comfortable performing a <em>somewhat</em> more complicated installation?',
+  qlink: { text: "See this video as to what's involved", url: 'https://youtu.be/Tbb-Sxusvu8' }
+};
+
+const ROOTED_BEST = {
+  device: '<span class="rooted">Rooted</span> FTV Cube 2',
+  sub: 'w/AVDVPlus CE build',
+  desc: 'Ultimate enthusiast option with DV FEL support. Added benefit of certified premium apps on Android side.'
+};
+
+// ── Node tree ────────────────────────────────────────────────────────────────
+const nodes = {
+
+  start: {
+    q: 'What matters most to you in your setup?',
+    choices: [
+      { label: 'Pure Kodi — okay w/o premium certified streaming apps (Netflix, Disney+, etc.) in the same box', next: 'a_dvfel' },
+      { label: 'Kodi + premium certified streaming apps in the same box', next: 'b_dvfel' },
+      { label: 'Framepacked 3D MVC support with Kodi', next: 'c_dvfel' }
+    ]
+  },
+
+  // PATH A
+  a_dvfel: {
+    q: 'Dolby Vision FEL support needed?',
+    choices: [{ label: 'Yes', next: 'a_modding' }, { label: 'No', next: 'result_a_no_dvfel' }]
+  },
+  a_modding: {
+    q: MODDING_Q.q, qlink: MODDING_Q.qlink,
+    choices: [{ label: 'Yes', next: 'result_a_yes_yes' }, { label: 'No', next: 'result_a_yes_no' }]
+  },
+  result_a_yes_yes: {
+    result: true,
+    altLabel: 'Second Choice / Alternatives (Easier install and setup)',
+    best: ROOTED_BEST,
+    alt: {
+      device: 'Ugoos AM6B+', sub: 'w/AVDVPlus CE build',
+      altDevices: ['Vero V'],
+      alts: ['Any of these w/AVDVPlus CE build: Homatics/variants, Dune HD Pro Vision 4K, or Ugoos X4Q Extra']
+    }
+  },
+  result_a_yes_no: {
+    result: true,
+    best: { device: 'Ugoos AM6B+', sub: 'w/AVDVPlus CE build', desc: 'Ultimate enthusiast option with DV FEL support.' },
+    alt: {
+      device: 'Vero V', sub: null, desc: 'The plug-and-play-it-all pure Kodi box that\'s well supported.',
+      alts: ['Any of these w/AVDVPlus CE build: Homatics/variants, Dune HD Pro Vision 4K, or Ugoos X4Q Extra']
+    }
+  },
+  result_a_no_dvfel: {
+    result: true,
+    best: { device: 'Amlogic S928X-J/K box', sub: null, desc: 'Ugoos SK1/SK1 Lite, X96 X10 or similar w/CE-NO. Most powerful Android hardware presently available.' },
+    alt: {
+      device: 'Vero V', sub: null,
+      alts: [
+        { intro: true, text: 'Vero V, and these alternatives w/AVDVPlus CE build, also happen to support DV FEL:' },
+        'Ugoos X4Q Extra',
+        'Homatics 4K Plus/variants, or Dune HD Pro Vision 4K'
+      ]
+    }
+  },
+
+  // PATH B
+  b_dvfel: {
+    q: 'Dolby Vision FEL support needed?',
+    choices: [{ label: 'Yes', next: 'b_modding' }, { label: 'No', next: 'result_b_no_dvfel' }]
+  },
+  b_modding: {
+    q: MODDING_Q.q, qlink: MODDING_Q.qlink,
+    choices: [{ label: 'Yes', next: 'result_b_yes_yes' }, { label: 'No', next: 'result_b_yes_no' }]
+  },
+  result_b_yes_yes: {
+    result: true,
+    altLabel: 'Second Choice / Alternatives (Easier install and setup)',
+    best: ROOTED_BEST,
+    alt: { device: 'Homatics 4K Plus/variants', sub: 'w/AVDVPlus CE build', alts: [] }
+  },
+  result_b_yes_no: {
+    result: true,
+    best: { device: 'Homatics 4K Plus/variants', sub: 'w/AVDVPlus CE build' },
+    alt: null
+  },
+  result_b_no_dvfel: {
+    result: true,
+    best: { device: 'Fire TV Cube 3', sub: null, desc: 'Excellent, powerful certified streaming box.' },
+    alt: {
+      device: 'nVidia Shield TV Pro', sub: '(lacks HDR10+ support however)',
+      alts: [
+        'BuzzTV G-Series or Homatics 4K Pro 2',
+        'Xiaomi Box S 3rd Gen (CE-NO also possible)',
+        'onn 4K Streaming Device (2026 stick) (cheap, but lacks DV)'
+      ]
+    }
+  },
+
+  // PATH C
+  c_dvfel: {
+    q: 'Dolby Vision FEL support needed?',
+    choices: [{ label: 'Yes', next: 'result_c_yes' }, { label: 'No', next: 'result_c_no_dvfel' }]
+  },
+  result_c_yes: {
+    result: true,
+    best: { device: 'Vero V', sub: null, desc: "Plays all 3D formats well, including ISO's." },
+    alt: {
+      device: 'Following w/AVDVPlus CE build:', sub: null, hideAltsLabel: true,
+      alts: [
+        'Ugoos AM6B+',
+        'FTV Cube 2 (somewhat more complicated installation)',
+        'Homatics/variants, Dune HD Pro Vision 4K, or Ugoos X4Q Extra'
+      ]
+    }
+  },
+  result_c_no_dvfel: {
+    result: true,
+    best: { device: 'Zidoo Z9X Pro', sub: null, desc: "The go-to device for framepacked 3D MVC MKV's and ISO's, plus FSBS and rest. Excellent, plug-and-play experience with ZDMC (Kodi fork) and outstanding 3D compatibility out of the box." },
+    alt: {
+      device: 'Vero V', sub: null, desc: "Plays all 3D formats well, including ISO's.",
+      alts: [
+        { intro: true, text: 'Vero V, and following alternatives w/AVDVPlus CE build also happen to support DV FEL:' },
+        'Ugoos AM6B+',
+        'FTV Cube 2 (somewhat more complicated installation)',
+        'Homatics/variants, Dune HD Pro Vision 4K, or Ugoos X4Q Extra'
+      ]
+    }
+  }
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentNode = 'intro';
+let history = [];
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function navigate(nodeId) { currentNode = nodeId; window.scrollTo(0, 0); render(); }
+function startQuiz() { history = []; navigate('start'); }
+function restart()   { history = []; navigate('intro'); }
+function choose(idx) {
+  const c = nodes[currentNode].choices[idx];
+  history.push({ nodeId: currentNode, choice: c.label });
+  navigate(c.next);
+}
+function goBack() {
+  if (!history.length) { navigate('intro'); return; }
+  navigate(history.pop().nodeId);
+}
+
+// ── Render helpers ───────────────────────────────────────────────────────────
+function renderProgressDots(step) {
+  const dots = Array.from({length: 3}, (_, i) =>
+    `<div class="progress-dot${i < step ? ' done' : i === step ? ' active' : ''}"></div>`
+  ).join('');
+  return `<div class="progress-bar">${dots}<span class="progress-label">QUESTION ${step + 1}</span></div>`;
+}
+
+function renderAlts(alts, hideLabel) {
+  if (!alts || !alts.length) return '';
+  const items = alts.map(a =>
+    a && a.intro
+      ? `<div class="alts-intro">${a.text}</div>`
+      : `<div class="alts-item">→ <span>${a}</span></div>`
+  ).join('');
+  return `<div class="result-alts">${hideLabel ? '' : '<div class="result-alts-label">Also consider</div>'}<div class="result-alts-list">${items}</div></div>`;
+}
+
+function renderBestCard(best) {
+  return `
+    <div class="result-label best">👑 Best Choice</div>
+    <div class="result-card best">
+      <div class="result-device">${best.device}</div>
+      ${best.sub  ? `<div class="result-sub">${best.sub}</div>`   : ''}
+      ${best.desc ? `<div class="result-desc">${best.desc}</div>` : ''}
+    </div>`;
+}
+
+function renderAltCard(alt, altLabel) {
+  if (!alt || !alt.device) return '';
+  const extra = (alt.altDevices || []).map(d =>
+    `<div class="alt-or">or</div><div class="alt-or-device">${d}</div>`
+  ).join('');
+  return `
+    <div class="result-label alt">◈ ${altLabel || 'Second Choice / Alternatives'}</div>
+    <div class="result-card alt">
+      <div class="result-device">${alt.device}</div>
+      ${alt.sub  ? `<div class="result-sub">${alt.sub}</div>`   : ''}
+      ${alt.desc ? `<div class="result-desc">${alt.desc}</div>` : ''}
+      ${extra}
+      ${renderAlts(alt.alts, alt.hideAltsLabel)}
+    </div>`;
+}
+
+function renderPathTrail() {
+  if (!history.length) return '';
+  return `<div class="path-trail">
+    <div class="path-trail-label">Your path</div>
+    ${history.map((h, i) => `<div class="path-item"><span class="path-q">Q${i+1}</span><span class="path-a">${h.choice}</span></div>`).join('')}
+  </div>`;
+}
+
+function reviewLinkRow() {
+  return `<div class="review-link-row">
+    <a class="review-link" onclick="toggleOverlay(true)">Review table stakes requirements ↗</a>
+    <span class="review-link-sep">|</span>
+    <a class="review-link" onclick="restart()">Start over</a>
+  </div>`;
+}
+
+const NOTE_HTML = `<div class="note-box">
+  <span class="note-label">Important notes:</span>
+  <ul class="note-bullets">
+    <li>For CoreELEC, AVDVPlus build is highly recommended for optimal experience, but official CE-NG 21.3 is fine to use</li>
+    <li>3D ISOs, and very uncommon AV1 w/HDR10+, don't play with any CE-NG 21.3 builds. 3D ISOs play w/21.2, but not reliably</li>
+    <li>All Android-based Fire TV and Google TV devices (except nVidia Shield TV Pro) play Dolby Vision Profile 7 in standard HDR on Android side unless 'DV compatibility mode' is enabled in Kodi settings (recommended) to have P7 converted to P8</li>
+  </ul>
+</div>`;
+
+// ── Main render ──────────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+
+  if (currentNode === 'intro') {
+    app.innerHTML = `
+      <div class="intro">
+        <div class="intro-headline">Find Your Perfect Kodi Box</div>
+        <div class="intro-sub" style="max-width:100%;white-space:nowrap;">Answer a couple of quick questions to get a personalized recommendation</div>
+        <div style="font-size:18px;color:var(--text-mid);margin-bottom:36px;"><a href="https://forum.kodi.tv/showthread.php?tid=385600" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(61,214,245,0.4);padding-bottom:1px;">Kodi forum support and discussion thread ↗</a></div>
+        <div class="glow-line"></div>
+        <div class="tablestakes">
+          <div class="tablestakes-title">All recommendations assume these table stakes</div>
+          <ul>${stakeItems}</ul>
+        </div>
+        <button class="btn btn-primary" onclick="startQuiz()">Start →</button>
+      </div>`;
+    return;
+  }
+
+  const node = nodes[currentNode];
+
+  if (node.result) {
+    app.innerHTML = `
+      <div class="result-screen">
+        <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:28px;">✓ Recommendation Ready</div>
+        ${renderBestCard(node.best)}
+        ${renderAltCard(node.alt, node.altLabel)}
+        ${NOTE_HTML}
+        ${renderPathTrail()}
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="restart()">Start Over</button>
+          <button class="btn btn-ghost" onclick="goBack()">← Change Last Answer</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const step = history.length;
+  app.innerHTML = `
+    ${renderProgressDots(step)}
+    <div class="question-card">
+      <div class="question-num">Q${step + 1} · Kodi-centric Media Player Decider 2026</div>
+      <div class="question-text">${node.q}</div>
+      ${node.qlink ? `<div class="question-link"><a href="${node.qlink.url}" target="_blank" rel="noopener">${node.qlink.text} ↗</a></div>` : ''}
+      <div class="choices">
+        ${node.choices.map((c, i) => `
+          <button class="choice-btn" onclick="choose(${i})">
+            <span class="choice-letter">${String.fromCharCode(65+i)}</span>
+            <span>${c.label}</span>
+          </button>`).join('')}
+      </div>
+    </div>
+    ${step > 0 ? `<div class="btn-row"><button class="btn btn-ghost" onclick="goBack()">← Back</button></div>` : ''}
+    ${reviewLinkRow()}`;
+}
+
+render();
+</script>
+</body>
+</html>
